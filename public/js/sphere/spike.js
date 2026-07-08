@@ -1,107 +1,65 @@
-// Phase 0 spike for the spherical-sliceform feature.
+// Spherical-sliceform sandbox (Phase 0 + Phase 1).
 //
-// Renders a Platonic solid projected onto a sphere: vertices are placed on the
-// sphere and each polyhedron edge is drawn as the great-circle arc between its
-// endpoints. This validates the 3D substrate (three.js + orbit preview) that the
-// full spherical mode will build on. Deliberately standalone — no dependency on
-// the existing 2D app code.
+// Phase 0: draw a Platonic solid's edges as great-circle arcs on a sphere.
+// Phase 1: draw a great-circle arrangement as an interlocking strip sphere,
+//          mark the crossings, report stats, and export flattened cutting strips.
+//
+// Uses the global THREE (r134 UMD) and window.SphereGeom (geometry.js). No modules.
 
 (function () {
   "use strict";
 
-  var R = 1; // sphere radius (unit sphere)
+  var R = 1;                 // preview sphere radius (unit)
   var PHI = (1 + Math.sqrt(5)) / 2;
+  var G = window.SphereGeom;
 
-  // ---- polyhedron vertex sets (unnormalised; each solid's verts are equidistant
-  // from the origin, so we normalise onto the sphere before drawing) -------------
-  function s(signs, coords) {
-    // expand all sign combinations of the non-zero coordinates
-    var out = [];
-    var idxs = [];
-    for (var i = 0; i < coords.length; i++) if (coords[i] !== 0) idxs.push(i);
-    var n = idxs.length;
-    for (var m = 0; m < (1 << n); m++) {
+  // ---- Platonic solids (Phase 0) ------------------------------------------------
+  function s(coords) {
+    var out = [], idx = [];
+    for (var i = 0; i < 3; i++) if (coords[i] !== 0) idx.push(i);
+    for (var m = 0; m < (1 << idx.length); m++) {
       var v = coords.slice();
-      for (var b = 0; b < n; b++) if (m & (1 << b)) v[idxs[b]] = -v[idxs[b]];
+      for (var b = 0; b < idx.length; b++) if (m & (1 << b)) v[idx[b]] = -v[idx[b]];
       out.push(v);
     }
     return out;
   }
-
-  function cyclic(coords) {
-    // three cyclic rotations of a coordinate triple, each with all sign combos
-    var rots = [
-      [coords[0], coords[1], coords[2]],
-      [coords[2], coords[0], coords[1]],
-      [coords[1], coords[2], coords[0]]
-    ];
+  function cyc(c) { return dedupe([].concat(s([c[0], c[1], c[2]]), s([c[2], c[0], c[1]]), s([c[1], c[2], c[0]]))); }
+  function dedupe(vs) {
     var out = [];
-    rots.forEach(function (r) { out = out.concat(s(null, r)); });
-    return dedupe(out);
-  }
-
-  function dedupe(verts) {
-    var out = [];
-    verts.forEach(function (v) {
-      if (!out.some(function (w) {
-        return Math.abs(w[0] - v[0]) < 1e-9 && Math.abs(w[1] - v[1]) < 1e-9 && Math.abs(w[2] - v[2]) < 1e-9;
-      })) out.push(v);
-    });
+    vs.forEach(function (v) { if (!out.some(function (w) { return d3dist(v, w) < 1e-9; })) out.push(v); });
     return out;
   }
+  function d3dist(a, b) { var x = a[0] - b[0], y = a[1] - b[1], z = a[2] - b[2]; return Math.sqrt(x * x + y * y + z * z); }
 
   var SOLIDS = {
     tetrahedron: [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]],
-    cube: s(null, [1, 1, 1]),
-    octahedron: cyclic([1, 0, 0]),
-    icosahedron: cyclic([0, 1, PHI]),
-    dodecahedron: s(null, [1, 1, 1])
-      .concat(cyclic([0, 1 / PHI, PHI]))
+    cube: s([1, 1, 1]),
+    octahedron: cyc([1, 0, 0]),
+    icosahedron: cyc([0, 1, PHI]),
+    dodecahedron: s([1, 1, 1]).concat(cyc([0, 1 / PHI, PHI]))
   };
 
-  // ---- geometry helpers ---------------------------------------------------------
-  function normalize(v) {
+  function normalizeTo(v, radius) {
     var L = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    return [v[0] / L * R, v[1] / L * R, v[2] / L * R];
+    return [v[0] / L * radius, v[1] / L * radius, v[2] / L * radius];
   }
-
-  // edges = the vertex pairs at the minimum (i.e. edge) distance
-  function edgesFromVertices(verts) {
+  function edgesOf(verts) {
     var min = Infinity, i, j, d;
-    for (i = 0; i < verts.length; i++)
-      for (j = i + 1; j < verts.length; j++) {
-        d = dist(verts[i], verts[j]);
-        if (d > 1e-6 && d < min) min = d;
-      }
-    var edges = [];
-    for (i = 0; i < verts.length; i++)
-      for (j = i + 1; j < verts.length; j++)
-        if (dist(verts[i], verts[j]) <= min * 1.02) edges.push([i, j]);
-    return edges;
+    for (i = 0; i < verts.length; i++) for (j = i + 1; j < verts.length; j++) { d = d3dist(verts[i], verts[j]); if (d > 1e-6 && d < min) min = d; }
+    var out = [];
+    for (i = 0; i < verts.length; i++) for (j = i + 1; j < verts.length; j++) if (d3dist(verts[i], verts[j]) <= min * 1.02) out.push([i, j]);
+    return out;
   }
-
-  function dist(a, b) {
-    var dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
-    return Math.sqrt(dx * dx + dy * dy + dz * dz);
-  }
-
-  // great-circle arc (slerp) between two points already on the sphere
-  function greatCircleArc(a, b, segments) {
+  function arcPoints(a, b, seg) {
     var ua = new THREE.Vector3(a[0], a[1], a[2]).normalize();
     var ub = new THREE.Vector3(b[0], b[1], b[2]).normalize();
     var omega = Math.acos(Math.max(-1, Math.min(1, ua.dot(ub))));
-    var pts = [];
     if (omega < 1e-6) return [ua.multiplyScalar(R), ub.multiplyScalar(R)];
-    var sinO = Math.sin(omega);
-    for (var i = 0; i <= segments; i++) {
-      var t = i / segments;
-      var s1 = Math.sin((1 - t) * omega) / sinO;
-      var s2 = Math.sin(t * omega) / sinO;
-      pts.push(new THREE.Vector3(
-        (ua.x * s1 + ub.x * s2) * R,
-        (ua.y * s1 + ub.y * s2) * R,
-        (ua.z * s1 + ub.z * s2) * R
-      ));
+    var sinO = Math.sin(omega), pts = [];
+    for (var i = 0; i <= seg; i++) {
+      var t = i / seg, s1 = Math.sin((1 - t) * omega) / sinO, s2 = Math.sin(t * omega) / sinO;
+      pts.push(new THREE.Vector3((ua.x * s1 + ub.x * s2) * R, (ua.y * s1 + ub.y * s2) * R, (ua.z * s1 + ub.z * s2) * R));
     }
     return pts;
   }
@@ -110,89 +68,118 @@
   var container = document.getElementById("sphereCanvas");
   var scene = new THREE.Scene();
   scene.background = new THREE.Color(0xf7f7f7);
-
   var camera = new THREE.PerspectiveCamera(50, aspect(), 0.1, 100);
   camera.position.set(0, 0, 3.3 * R);
-
   var renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio || 1);
   renderer.setSize(container.clientWidth, container.clientHeight);
   container.appendChild(renderer.domElement);
-
   var controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
-
+  controls.enableDamping = true; controls.dampingFactor = 0.08;
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-  var dir = new THREE.DirectionalLight(0xffffff, 0.6);
-  dir.position.set(4, 5, 6);
-  scene.add(dir);
-
-  var group = new THREE.Group();
-  scene.add(group);
+  var dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(4, 5, 6); scene.add(dir);
+  var group = new THREE.Group(); scene.add(group);
 
   var sphereMesh = new THREE.Mesh(
     new THREE.SphereGeometry(R * 0.99, 48, 48),
-    new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, shininess: 5 })
-  );
-
+    new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, shininess: 5 }));
   var edgeMat = new THREE.MeshPhongMaterial({ color: 0x1f6feb, shininess: 30 });
   var vertMat = new THREE.MeshPhongMaterial({ color: 0x24292f });
+  var simpleMat = new THREE.MeshPhongMaterial({ color: 0x2ea043 });   // simple crossing
+  var multiMat = new THREE.MeshPhongMaterial({ color: 0xd1242f });    // multi-way junction
 
   function aspect() { return container.clientWidth / container.clientHeight; }
-
   function clearGroup() {
     for (var i = group.children.length - 1; i >= 0; i--) {
-      var c = group.children[i];
-      group.remove(c);
+      var c = group.children[i]; group.remove(c);
       if (c.geometry && c !== sphereMesh) c.geometry.dispose();
     }
   }
 
-  function render(name) {
+  // ---- Phase 0: polyhedron edges ------------------------------------------------
+  function renderSolid(name) {
     clearGroup();
-
     if (document.getElementById("showSphere").checked) group.add(sphereMesh);
-
-    var verts = SOLIDS[name].map(normalize);
-    var edges = edgesFromVertices(verts);
-
-    edges.forEach(function (e) {
-      var arc = greatCircleArc(verts[e[0]], verts[e[1]], 48);
-      var curve = new THREE.CatmullRomCurve3(arc);
-      var tube = new THREE.TubeGeometry(curve, 48, 0.013 * R, 8, false);
+    var verts = SOLIDS[name].map(function (v) { return normalizeTo(v, R); });
+    edgesOf(verts).forEach(function (e) {
+      var tube = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arcPoints(verts[e[0]], verts[e[1]], 48)), 48, 0.013 * R, 8, false);
       group.add(new THREE.Mesh(tube, edgeMat));
     });
+    verts.forEach(function (v) {
+      var m = new THREE.Mesh(new THREE.SphereGeometry(0.028 * R, 16, 16), vertMat);
+      m.position.set(v[0], v[1], v[2]); group.add(m);
+    });
+    document.getElementById("gcPanel").style.display = "none";
+  }
 
-    if (document.getElementById("showVertices").checked) {
-      verts.forEach(function (v) {
-        var m = new THREE.Mesh(new THREE.SphereGeometry(0.028 * R, 16, 16), vertMat);
-        m.position.set(v[0], v[1], v[2]);
-        group.add(m);
+  // ---- Phase 1: great-circle strips ---------------------------------------------
+  var currentModel = null; // last built SphereGeom model (for export)
+
+  function renderGreatCircles(key) {
+    clearGroup();
+    if (document.getElementById("showSphere").checked) group.add(sphereMesh);
+    var arr = G.ARRANGEMENTS[key];
+
+    // one tube-torus per great circle, oriented so its plane is perpendicular to n
+    var zAxis = new THREE.Vector3(0, 0, 1);
+    arr.normals.forEach(function (n) {
+      var torus = new THREE.Mesh(new THREE.TorusGeometry(R, 0.011 * R, 8, 128), edgeMat);
+      torus.quaternion.setFromUnitVectors(zAxis, new THREE.Vector3(n[0], n[1], n[2]).normalize());
+      group.add(torus);
+    });
+
+    var cr = G.computeCrossings(arr.normals, R);
+    if (document.getElementById("showCrossings").checked) {
+      cr.clusters.forEach(function (cl) {
+        var multi = cl.circles.length > 2;
+        var m = new THREE.Mesh(new THREE.SphereGeometry((multi ? 0.05 : 0.03) * R, 16, 16), multi ? multiMat : simpleMat);
+        m.position.set(cl.pos[0], cl.pos[1], cl.pos[2]); group.add(m);
       });
     }
+
+    currentModel = G.buildStrips(key, +document.getElementById("radius").value);
+    var multiPts = cr.clusters.filter(function (c) { return c.circles.length > 2; }).length;
+    var totalSlots = currentModel.strips.reduce(function (a, s2) { return a + s2.positions.length; }, 0);
+    document.getElementById("stats").innerHTML =
+      "<b>" + arr.normals.length + "</b> circles &middot; " +
+      "<b>" + cr.clusters.length + "</b> crossings (" +
+      "<span style='color:#2ea043'>" + (cr.clusters.length - multiPts) + " simple</span>, " +
+      "<span style='color:#d1242f'>" + multiPts + " multi-way</span>) &middot; " +
+      "<b>" + totalSlots + "</b> slots total";
+    document.getElementById("gcPanel").style.display = "block";
   }
 
-  function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
+  // ---- dispatch + wiring --------------------------------------------------------
+  function draw() {
+    var val = document.getElementById("modelSelect").value;
+    var parts = val.split(":");
+    if (parts[0] === "solid") renderSolid(parts[1]);
+    else renderGreatCircles(parts[1]);
   }
 
-  // ---- wiring -------------------------------------------------------------------
-  function current() { return document.getElementById("solidSelect").value; }
-  function rerender() { render(current()); }
+  function exportSVG() {
+    var key = document.getElementById("modelSelect").value.split(":")[1];
+    var radius = +document.getElementById("radius").value;
+    var model = G.buildStrips(key, radius);
+    var svg = G.stripsToSVG(model, { scale: 1, stripHeight: +document.getElementById("stripHeight").value });
+    var blob = new Blob([svg], { type: "image/svg+xml" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "spherical_" + key + "_strips.svg";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
 
-  document.getElementById("solidSelect").addEventListener("change", rerender);
-  document.getElementById("showSphere").addEventListener("change", rerender);
-  document.getElementById("showVertices").addEventListener("change", rerender);
-
+  document.getElementById("modelSelect").addEventListener("change", draw);
+  document.getElementById("showSphere").addEventListener("change", draw);
+  document.getElementById("showCrossings").addEventListener("change", draw);
+  document.getElementById("radius").addEventListener("change", draw);
+  document.getElementById("exportBtn").addEventListener("click", exportSVG);
   window.addEventListener("resize", function () {
-    camera.aspect = aspect();
-    camera.updateProjectionMatrix();
+    camera.aspect = aspect(); camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);
   });
 
-  render("dodecahedron");
-  animate();
+  (function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); })();
+  draw();
 })();

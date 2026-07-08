@@ -1,28 +1,53 @@
 .container(style="padding-top: 90px; padding-bottom: 40px")
-  h2 Spherical Sliceform — 3D spike
+  h2 Spherical Sliceform — 3D sandbox
   p.text-muted
-    | Phase 0 proof-of-concept: a base polyhedron projected onto a sphere, with its
-    | edges drawn as great-circle arcs. Drag to orbit, scroll to zoom. This sandbox
-    | exists to validate the 3D substrate + preview before the full spherical mode.
+    | Phase 0/1 proof-of-concept. Pick a polyhedron to see its edges as great-circle
+    | arcs, or a great-circle arrangement to build an interlocking strip sphere:
+    | crossings are marked (green = simple pair, red = multi-way junction) and the
+    | flattened cutting strips can be exported as SVG. Drag to orbit, scroll to zoom.
 
   .form-inline(style="margin: 15px 0")
     .form-group
-      label(style="margin-right: 8px") Base solid
-      select#solidSelect.form-control
-        option(value="tetrahedron") Tetrahedron
-        option(value="cube") Cube
-        option(value="octahedron") Octahedron
-        option(value="icosahedron") Icosahedron
-        option(value="dodecahedron", selected) Dodecahedron
+      label(style="margin-right: 8px") Model
+      select#modelSelect.form-control
+        optgroup(label="Polyhedron edges")
+          option(value="solid:tetrahedron") Tetrahedron
+          option(value="solid:cube") Cube
+          option(value="solid:octahedron") Octahedron
+          option(value="solid:icosahedron") Icosahedron
+          option(value="solid:dodecahedron") Dodecahedron
+        optgroup(label="Great-circle sliceform")
+          option(value="gc:ortho3") 3 orthogonal circles
+          option(value="gc:ico6") 6 great circles (icosahedral)
+          option(value="gc:ico10") 10 great circles (icosahedral)
+          option(value="gc:ico15", selected) 15 great circles (icosahedral)
+          option(value="gc:ico31") 31 great circles (icosahedral)
     label.checkbox-inline(style="margin-left: 20px")
       input#showSphere(type="checkbox", checked)
       |  Show sphere
     label.checkbox-inline(style="margin-left: 12px")
-      input#showVertices(type="checkbox", checked)
-      |  Show vertices
+      input#showCrossings(type="checkbox", checked)
+      |  Show crossings
 
-  #sphereCanvas(style="width: 100%; height: 600px; background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px")
+  #sphereCanvas(style="width: 100%; height: 560px; background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px")
+
+  #gcPanel(style="margin-top: 15px")
+    p#stats.text-muted(style="margin-bottom: 10px")
+    .form-inline
+      .form-group(style="margin-right: 15px")
+        label(style="margin-right: 6px") Strip width (mm)
+        input#stripHeight.form-control(type="number", value="8", min="2", max="40", step="1", style="width: 80px")
+      .form-group(style="margin-right: 15px")
+        label(style="margin-right: 6px") Sphere radius (mm)
+        input#radius.form-control(type="number", value="80", min="20", max="300", step="5", style="width: 90px")
+      button#exportBtn.btn.btn-primary
+        i.fa.fa-download
+        |  Export cutting strips (SVG)
+    p.text-muted(style="margin-top: 8px; font-size: 12px")
+      | Legend: blue = strip outline, black = interlocking slot (half-depth, alternating
+      | edge), red = seam/fold. Strips marked * have an odd slot count (weave seam clash).
 
   script(src="bower/three/three.min.js")
   script(src="bower/three/OrbitControls.js")
+  script(src="js/sphere/geometry.js")
   script(src="js/sphere/spike.js")
