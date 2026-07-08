@@ -46,6 +46,12 @@ const FILES = {
   'file-saver/FileSaver.min.js': 'https://cdn.jsdelivr.net/npm/file-saver@1.3.8/FileSaver.min.js',
   'gifffer/build/gifffer.min.js': 'https://cdn.jsdelivr.net/npm/gifffer@1.5.3/build/gifffer.min.js',
 
+  // three.js for the spherical-sliceform 3D preview. Pinned to r134, the last
+  // line that still ships a UMD global build + classic (non-module) OrbitControls,
+  // matching the app's no-bundler <script>-tag convention.
+  'three/three.min.js': 'https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js',
+  'three/OrbitControls.js': 'https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js',
+
   // lightbox2 (gallery page): js, css and its ui images
   'lightbox2/dist/js/lightbox.js': 'https://cdn.jsdelivr.net/gh/lokesh/lightbox2@v2.8.1/dist/js/lightbox.js',
   'lightbox2/dist/css/lightbox.css': 'https://cdn.jsdelivr.net/gh/lokesh/lightbox2@v2.8.1/dist/css/lightbox.css',
