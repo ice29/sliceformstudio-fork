@@ -8,18 +8,18 @@
 					figure.centered
 						.thumb
 							if (image.slfm)
-								a(href="/images/gallery-diagrams/#{image.filename}.jpg", data-lightbox="#{image.filename}" data-title="#{image.title} (#{image.year})")
+								a(href="/images/gallery-diagrams/" + image.filename + ".jpg", data-lightbox=image.filename, data-title=image.title + " (" + image.year + ")")
 									div.responsive-sprites
-										img(class="icon-#{image.filename}", alt="#{image.title}", src="/images/sprites/gallery-thumbs-sprite.jpg")
+										img(class="icon-" + image.filename, alt=image.title, src="/images/sprites/gallery-thumbs-sprite.jpg")
 									.overlay Click to view diagrams
 							else
-								a(href="/images/gallery/#{image.filename}.jpg", data-lightbox="#{image.filename}" data-title="#{image.title} (#{image.year})")
+								a(href="/images/gallery/" + image.filename + ".jpg", data-lightbox=image.filename, data-title=image.title + " (" + image.year + ")")
 									div.responsive-sprites
-										img(class="icon-#{image.filename}", alt="#{image.title}", src="/images/sprites/gallery-thumbs-sprite.jpg")
+										img(class="icon-" + image.filename, alt=image.title, src="/images/sprites/gallery-thumbs-sprite.jpg")
 									.overlay Click to view larger image
 						figcaption
 							label #{image.title} (#{image.year})
 							.subcaption #{image.description}
 							if image.slfm
 								.subcaption(style="height: 19px;")
-										a(href="/app.html?template=#{image.slfm}&strips=true") View in app
+										a(href="/app.html?template=" + image.slfm + "&strips=true") View in app

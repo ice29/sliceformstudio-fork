@@ -1,12 +1,13 @@
 # IDE
 .idea
 
-# Bower + Node
-bower_components
+# Node
 node_modules
 
+# build output
 www
-public/bower
+
+# never-committed binary assets (images / sprites are generated separately)
 public/images
 public/css/*-sprite.less
 public/slfm_files/gallery
