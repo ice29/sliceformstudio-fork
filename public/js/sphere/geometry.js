@@ -179,49 +179,63 @@
   }
 
   // ---- SVG cutting template -----------------------------------------------------
-  // Straight strips stacked vertically; slots are half-height cuts alternating
-  // top/bottom edge; a join tab (with a score/fold line) is added at the seam.
+  // A great-circle strip is a radial wall on the sphere, so it flattens to a flat
+  // ANNULAR ring: mean radius = sphere radius, width = strip width. It is a curved
+  // piece, NOT a straight strip — paper cannot be bent into an in-plane arc without
+  // buckling, so it must be cut curved. Slots are radial cuts at each crossing
+  // angle, alternating between the outer and inner edge to half depth so two rings
+  // interlock. Rings are laid out in a grid.
   function stripsToSVG(model, opts) {
     opts = opts || {};
-    var scaleF = opts.scale || 1;        // px per unit length
-    var h = opts.stripHeight || 24;      // strip width (px)
-    var gapY = opts.gap != null ? opts.gap : 12;
-    var tab = opts.tab != null ? opts.tab : 18;
-    var mL = 90, mT = 20;
-    var lines = [], labels = [];
-    var maxW = 0, y = mT;
+    var scaleF = opts.scale || 1;        // px per unit length (mm)
+    var hpx = (opts.stripHeight || 8) * scaleF; // radial strip width
+    var els = [];
 
-    model.strips.forEach(function (strip) {
-      var x0 = mL, x = x0, parity = false;
-      var stripLen = strip.circumference * scaleF;
-      // outline (strip + join tab on the right)
-      lines.push(rect(x0, y, stripLen + tab, h, "#0000ff"));
-      lines.push(seg(x0 + stripLen, y, x0 + stripLen, y + h, "#ff0000")); // seam / fold score
-      // slots
-      strip.gaps.forEach(function (g, k) {
-        x += g * scaleF;
-        if (k === strip.gaps.length - 1) return; // last gap closes the loop at the seam
-        var y1 = parity ? y : y + h / 2;
-        var y2 = parity ? y + h / 2 : y + h;
-        parity = !parity;
-        lines.push(seg(x, y1, x, y2, "#000000"));
+    // all great circles share the sphere radius; size the grid cell to the ring
+    var maxRo = 0;
+    model.strips.forEach(function (s2) {
+      maxRo = Math.max(maxRo, (s2.circumference / (2 * Math.PI)) * scaleF + hpx / 2);
+    });
+    var margin = 20, pad = Math.max(14, hpx);
+    var cell = 2 * maxRo + pad;
+    var cols = Math.ceil(Math.sqrt(model.strips.length));
+    var rows = Math.ceil(model.strips.length / cols);
+
+    model.strips.forEach(function (strip, i) {
+      var R = strip.circumference / (2 * Math.PI); // sphere radius (mm)
+      var Rpx = R * scaleF, ri = Rpx - hpx / 2, ro = Rpx + hpx / 2;
+      var col = i % cols, row = Math.floor(i / cols);
+      var cx = margin + col * cell + cell / 2;
+      var cy = margin + row * cell + cell / 2;
+
+      // annulus outline (both edges are cut)
+      els.push(circle(cx, cy, ro, "#0000ff"));
+      els.push(circle(cx, cy, ri, "#0000ff"));
+
+      // radial interlocking slots at each crossing, alternating outer / inner edge
+      strip.positions.forEach(function (pos, k) {
+        var ang = pos / R; // radians around the ring
+        var fromR = (k % 2 === 0) ? ro : ri; // start at outer or inner edge
+        var toR = Rpx;                        // cut in to mid depth (h/2)
+        var a = pt(cx, cy, fromR, ang), b = pt(cx, cy, toR, ang);
+        els.push(seg(a[0], a[1], b[0], b[1], "#000000"));
       });
-      labels.push(text(20, y + h / 2 + 4, "#" + strip.index + (strip.seamClash ? " *" : "")));
-      maxW = Math.max(maxW, x0 + stripLen + tab);
-      y += h + gapY;
+
+      els.push(text(cx, cy + 4, "#" + strip.index + (strip.seamClash ? " *" : "")));
     });
 
-    var W = Math.ceil(maxW + 20), H = Math.ceil(y + 10);
+    var W = Math.ceil(cols * cell + 2 * margin), H = Math.ceil(rows * cell + 2 * margin);
     return [
       "<?xml version='1.0' encoding='utf-8'?>",
       "<svg xmlns='http://www.w3.org/2000/svg' width='" + W + "' height='" + H + "' viewBox='0 0 " + W + " " + H + "'>",
-      "<style>line{stroke-width:1;fill:none}rect{fill:none;stroke-width:1}text{font:12px sans-serif;fill:#333}</style>",
-      lines.join(""), labels.join(""),
+      "<style>line{stroke-width:1;fill:none}circle{fill:none;stroke-width:1}text{font:11px sans-serif;fill:#333;text-anchor:middle}</style>",
+      els.join(""),
       "</svg>"
     ].join("");
 
+    function pt(cx, cy, rr, ang) { return [cx + rr * Math.cos(ang), cy + rr * Math.sin(ang)]; }
     function seg(x1, y1, x2, y2, c) { return "<line x1='" + r(x1) + "' y1='" + r(y1) + "' x2='" + r(x2) + "' y2='" + r(y2) + "' stroke='" + c + "'/>"; }
-    function rect(x, yy, w, hh, c) { return "<rect x='" + r(x) + "' y='" + r(yy) + "' width='" + r(w) + "' height='" + r(hh) + "' stroke='" + c + "'/>"; }
+    function circle(cx, cy, rr, c) { return "<circle cx='" + r(cx) + "' cy='" + r(cy) + "' r='" + r(rr) + "' stroke='" + c + "'/>"; }
     function text(x, yy, t) { return "<text x='" + r(x) + "' y='" + r(yy) + "'>" + t + "</text>"; }
     function r(n) { return Math.round(n * 100) / 100; }
   }

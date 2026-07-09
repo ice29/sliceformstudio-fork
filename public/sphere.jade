@@ -44,8 +44,11 @@
         i.fa.fa-download
         |  Export cutting strips (SVG)
     p.text-muted(style="margin-top: 8px; font-size: 12px")
-      | Legend: blue = strip outline, black = interlocking slot (half-depth, alternating
-      | edge), red = seam/fold. Strips marked * have an odd slot count (weave seam clash).
+      | Each strip is a flat annular ring (mean radius = sphere radius, width = strip
+      | width) — curved, not straight, because a radial wall on a sphere lies in its
+      | great-circle plane. Blue = cut edges of the ring; black = radial interlocking
+      | slot (half-depth, alternating outer/inner edge). Rings marked * have an odd
+      | slot count (alternating weave does not close cleanly).
 
   script(src="bower/three/three.min.js")
   script(src="bower/three/OrbitControls.js")
