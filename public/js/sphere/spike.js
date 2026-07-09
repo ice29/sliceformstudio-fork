@@ -149,12 +149,42 @@
     document.getElementById("gcPanel").style.display = "block";
   }
 
+  // ---- Phase 2a: spherical Islamic pattern --------------------------------------
+  var patMat = new THREE.MeshPhongMaterial({ color: 0x8250df, shininess: 30 });
+  var faintMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+
+  function renderPattern(name) {
+    clearGroup();
+    if (document.getElementById("showSphere").checked) group.add(sphereMesh);
+    var theta = +document.getElementById("contactAngle").value;
+    var pat = window.SpherePattern.buildPattern(name, { radius: R, contactAngleDeg: theta, samples: 10 });
+
+    // faint base-polyhedron edges for reference
+    pat.edges.forEach(function (e) {
+      var arc = arcPoints(scaleV(e[0], R), scaleV(e[1], R), 32);
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arc), 32, 0.004 * R, 6, false), faintMat));
+    });
+
+    // the projected motif curves
+    pat.motifs.forEach(function (poly) {
+      var pts = poly.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 2, 0.016 * R, 8, false), patMat));
+    });
+
+    document.getElementById("gcPanel").style.display = "none";
+    document.getElementById("patPanel").style.display = "block";
+    document.getElementById("contactAngleVal").textContent = theta + "°";
+  }
+
+  function scaleV(v, s) { return [v[0] * s, v[1] * s, v[2] * s]; }
+
   // ---- dispatch + wiring --------------------------------------------------------
   function draw() {
     var val = document.getElementById("modelSelect").value;
     var parts = val.split(":");
-    if (parts[0] === "solid") renderSolid(parts[1]);
-    else renderGreatCircles(parts[1]);
+    if (parts[0] === "solid") { renderSolid(parts[1]); document.getElementById("patPanel").style.display = "none"; }
+    else if (parts[0] === "pat") renderPattern(parts[1]);
+    else { renderGreatCircles(parts[1]); document.getElementById("patPanel").style.display = "none"; }
   }
 
   function exportSVG() {
@@ -178,6 +208,7 @@
   document.getElementById("showSphere").addEventListener("change", draw);
   document.getElementById("showCrossings").addEventListener("change", draw);
   document.getElementById("radius").addEventListener("change", draw);
+  document.getElementById("contactAngle").addEventListener("input", draw);
   document.getElementById("exportBtn").addEventListener("click", exportSVG);
   window.addEventListener("resize", function () {
     camera.aspect = aspect(); camera.updateProjectionMatrix();

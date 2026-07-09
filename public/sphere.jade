@@ -22,12 +22,28 @@
           option(value="gc:ico10") 10 great circles (icosahedral)
           option(value="gc:ico15", selected) 15 great circles (icosahedral)
           option(value="gc:ico31") 31 great circles (icosahedral)
+        optgroup(label="Spherical pattern (Islamic motif)")
+          option(value="pat:cube") Cube — star motif
+          option(value="pat:octahedron") Octahedron — star motif
+          option(value="pat:icosahedron") Icosahedron — star motif
+          option(value="pat:dodecahedron") Dodecahedron — star motif
     label.checkbox-inline(style="margin-left: 20px")
       input#showSphere(type="checkbox", checked)
       |  Show sphere
     label.checkbox-inline(style="margin-left: 12px")
       input#showCrossings(type="checkbox", checked)
       |  Show crossings
+
+  #patPanel(style="margin: 10px 0; display: none")
+    .form-inline
+      .form-group
+        label(style="margin-right: 8px") Contact angle
+        input#contactAngle(type="range", min="12", max="78", value="30", step="1", style="vertical-align: middle; width: 220px")
+        span#contactAngleVal.text-muted(style="margin-left: 8px") 30°
+      span.text-muted(style="margin-left: 20px; font-size: 12px")
+        | Star motif built on each face (Hankin's method) and projected onto the sphere.
+        | Adjusting the contact angle changes the star; lines join across edges into
+        | continuous curves — the future pattern strips.
 
   #sphereCanvas(style="width: 100%; height: 560px; background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px")
 
@@ -60,4 +76,5 @@
   script(src="bower/three/three.min.js")
   script(src="bower/three/OrbitControls.js")
   script(src="js/sphere/geometry.js")
+  script(src="js/sphere/pattern.js")
   script(src="js/sphere/spike.js")
