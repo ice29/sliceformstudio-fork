@@ -42,7 +42,7 @@
         input#skip.form-control(type="number", value="2", min="1", max="6", step="1", style="width: 70px")
       .form-group(style="margin-right: 15px")
         label(style="margin-right: 6px") Strip width (mm)
-        input#patStripHeight.form-control(type="number", value="8", min="2", max="40", step="1", style="width: 80px")
+        input#patStripHeight.form-control(type="number", value="14", min="2", max="40", step="1", style="width: 80px")
       .form-group(style="margin-right: 15px")
         label(style="margin-right: 6px") Radius (mm)
         input#patRadius.form-control(type="number", value="80", min="20", max="300", step="5", style="width: 85px")
@@ -52,6 +52,9 @@
           option(value="1") 1 arc
           option(value="2", selected) 2 arcs
           option(value="3") 3 arcs
+      label.checkbox-inline(style="margin-right: 15px")
+        input#colorByStrip(type="checkbox")
+        |  Colour by strip
       button#patExportBtn.btn.btn-primary
         i.fa.fa-download
         |  Export cutting strips (SVG)

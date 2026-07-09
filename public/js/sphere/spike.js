@@ -173,12 +173,24 @@
       }
     });
 
-    // one coloured tube per traced strip
-    m.strips.forEach(function (strip, si) {
-      if (strip.points.length < 2) return;
-      var pts = strip.points.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
-      var mat = new THREE.MeshPhongMaterial({ color: stripColor(si, m.strips.length), shininess: 30 });
-      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), pts.length * 2, 0.015 * R, 8, true), mat));
+    // draw the actual pattern chords (sharp star shapes). The chords ARE the
+    // visible star motif on each face; colour by strip only when requested (that
+    // fragments each face's star, so it is off by default).
+    var byStrip = document.getElementById("colorByStrip").checked;
+    var mats = m.strips.map(function (_, si) {
+      return new THREE.MeshPhongMaterial({ color: stripColor(si, m.strips.length), shininess: 30 });
+    });
+    var oneMat = new THREE.MeshPhongMaterial({ color: 0x8250df, shininess: 30 });
+    m.chords.forEach(function (c) {
+      var pts = [];
+      for (var t = 0; t <= 10; t++) {
+        var f = t / 10;
+        pts.push(new THREE.Vector3(
+          c.aFlat[0] * (1 - f) + c.bFlat[0] * f,
+          c.aFlat[1] * (1 - f) + c.bFlat[1] * f,
+          c.aFlat[2] * (1 - f) + c.bFlat[2] * f).normalize().multiplyScalar(R));
+      }
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.018 * R, 8, false), byStrip ? mats[c.strip || 0] : oneMat));
     });
 
     // crossing markers
@@ -247,6 +259,7 @@
   document.getElementById("radius").addEventListener("change", draw);
   document.getElementById("skip").addEventListener("change", draw);
   document.getElementById("patRadius").addEventListener("change", draw);
+  document.getElementById("colorByStrip").addEventListener("change", draw);
   document.getElementById("exportBtn").addEventListener("click", exportSVG);
   document.getElementById("patExportBtn").addEventListener("click", patternExport);
   window.addEventListener("resize", function () {

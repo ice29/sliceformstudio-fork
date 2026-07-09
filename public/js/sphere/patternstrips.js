@@ -117,7 +117,10 @@
       while (h >= 0 && !used[h] && guard++ < H.length * 2) {
         used[h] = true; used[h ^ 1] = true; seq.push(h); h = next[h];
       }
-      if (seq.length) strips.push(seq);
+      if (seq.length) {
+        seq.forEach(function (hi) { chords[H[hi].chord].strip = strips.length; });
+        strips.push(seq);
+      }
     }
 
     // --- develop each strip to an annular sector (radius R) ------------------------
@@ -202,10 +205,10 @@
     pieces.forEach(function (p, i) {
       var cx = margin + (i % cols) * cell + cell / 2, cy = margin + Math.floor(i / cols) * cell + cell / 2;
       els.push(sector(cx, cy, ri, ro, p.a0, p.a1, "#0000ff"));
+      var kerf = 1.4 * scaleF, dA = (kerf / 2) / Rpx; // notch half-width (angular)
       p.slots.forEach(function (sl) {
-        var fromR = (sl.edge === 0) ? ro : ri, toR = Rpx;
-        var a = pt(cx, cy, fromR, sl.ang), b = pt(cx, cy, toR, sl.ang);
-        els.push(seg(a[0], a[1], b[0], b[1], "#000000"));
+        var fromR = (sl.edge === 0) ? ro : ri, toR = Rpx; // cut to half depth from one edge
+        els.push(notch(cx, cy, fromR, toR, sl.ang, dA));
       });
       var mid = (p.a0 + p.a1) / 2, lp = pt(cx, cy, Rpx, mid);
       els.push(text(lp[0], lp[1], p.label));
@@ -226,7 +229,13 @@
       return "<path d='M" + r(o0[0]) + " " + r(o0[1]) + "A" + r(ro) + " " + r(ro) + " 0 " + large + " 1 " + r(o1[0]) + " " + r(o1[1]) +
         "L" + r(i1[0]) + " " + r(i1[1]) + "A" + r(ri) + " " + r(ri) + " 0 " + large + " 0 " + r(i0[0]) + " " + r(i0[1]) + "Z' stroke='" + c + "'/>";
     }
-    function seg(x1, y1, x2, y2, c) { return "<line x1='" + r(x1) + "' y1='" + r(y1) + "' x2='" + r(x2) + "' y2='" + r(y2) + "' stroke='" + c + "'/>"; }
+    // a slot drawn as a thin open-ended notch (two sides + a cap at depth)
+    function notch(cx, cy, fromR, toR, ang, dA) {
+      var s1o = pt(cx, cy, fromR, ang - dA), s1i = pt(cx, cy, toR, ang - dA);
+      var s2i = pt(cx, cy, toR, ang + dA), s2o = pt(cx, cy, fromR, ang + dA);
+      return "<path d='M" + r(s1o[0]) + " " + r(s1o[1]) + "L" + r(s1i[0]) + " " + r(s1i[1]) +
+        "L" + r(s2i[0]) + " " + r(s2i[1]) + "L" + r(s2o[0]) + " " + r(s2o[1]) + "' stroke='#000000'/>";
+    }
     function text(x, y, t) { return "<text x='" + r(x) + "' y='" + r(y + 3) + "'>" + t + "</text>"; }
     function r(n) { return Math.round(n * 100) / 100; }
   }
