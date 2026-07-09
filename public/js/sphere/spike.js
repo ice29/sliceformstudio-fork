@@ -161,7 +161,11 @@
     var key = document.getElementById("modelSelect").value.split(":")[1];
     var radius = +document.getElementById("radius").value;
     var model = G.buildStrips(key, radius);
-    var svg = G.stripsToSVG(model, { scale: 1, stripHeight: +document.getElementById("stripHeight").value });
+    var svg = G.stripsToSVG(model, {
+      scale: 1,
+      stripHeight: +document.getElementById("stripHeight").value,
+      split: +document.getElementById("splitCount").value
+    });
     var blob = new Blob([svg], { type: "image/svg+xml" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");

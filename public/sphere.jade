@@ -40,15 +40,22 @@
       .form-group(style="margin-right: 15px")
         label(style="margin-right: 6px") Sphere radius (mm)
         input#radius.form-control(type="number", value="80", min="20", max="300", step="5", style="width: 90px")
+      .form-group(style="margin-right: 15px")
+        label(style="margin-right: 6px") Cut each ring into
+        select#splitCount.form-control(style="width: 140px")
+          option(value="1") 1 open ring
+          option(value="2", selected) 2 half-circles
+          option(value="3") 3 arcs
+          option(value="4") 4 arcs
       button#exportBtn.btn.btn-primary
         i.fa.fa-download
         |  Export cutting strips (SVG)
     p.text-muted(style="margin-top: 8px; font-size: 12px")
-      | Each strip is a flat annular ring (mean radius = sphere radius, width = strip
-      | width) — curved, not straight, because a radial wall on a sphere lies in its
-      | great-circle plane. Blue = cut edges of the ring; black = radial interlocking
-      | slot (half-depth, alternating outer/inner edge). Rings marked * have an odd
-      | slot count (alternating weave does not close cleanly).
+      | Each ring is a curved annular piece (mean radius = sphere radius, width =
+      | strip width) — not a straight strip. Closed rings can't be assembled (every
+      | pair of great circles is linked), so each is cut into open arcs that weave
+      | together. Blue = cut outline; black = radial interlocking slot (half-depth,
+      | alternating outer/inner edge). Labels are ring.arc.
 
   script(src="bower/three/three.min.js")
   script(src="bower/three/OrbitControls.js")
