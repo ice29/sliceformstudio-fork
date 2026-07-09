@@ -31,21 +31,41 @@
     }
     return out;
   }
+  // even (cyclic) permutations with all sign combinations of the non-zero coords
   function cyc(c) {
     return dedupe([].concat(signs([c[0], c[1], c[2]]), signs([c[2], c[0], c[1]]), signs([c[1], c[2], c[0]])));
   }
+  // all 6 permutations with all sign combinations (for octahedral solids)
+  function allp(c) {
+    var perms = [[c[0], c[1], c[2]], [c[0], c[2], c[1]], [c[1], c[0], c[2]],
+      [c[1], c[2], c[0]], [c[2], c[0], c[1]], [c[2], c[1], c[0]]];
+    var out = [];
+    perms.forEach(function (p) { out = out.concat(signs(p)); });
+    return dedupe(out);
+  }
+  function cat() { return dedupe(Array.prototype.concat.apply([], arguments)); }
   function dedupe(vs) {
     var out = [];
     vs.forEach(function (v) { if (!out.some(function (w) { return dist(v, w) < 1e-9; })) out.push(v); });
     return out;
   }
+  var P2 = PHI + 1; // phi^2
 
   var POLYHEDRA = {
     tetrahedron: { label: "Tetrahedron", verts: [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]] },
     cube: { label: "Cube", verts: signs([1, 1, 1]) },
     octahedron: { label: "Octahedron", verts: cyc([1, 0, 0]) },
     icosahedron: { label: "Icosahedron", verts: cyc([0, 1, PHI]) },
-    dodecahedron: { label: "Dodecahedron", verts: signs([1, 1, 1]).concat(cyc([0, 1 / PHI, PHI])) }
+    dodecahedron: { label: "Dodecahedron", verts: signs([1, 1, 1]).concat(cyc([0, 1 / PHI, PHI])) },
+    // Archimedean solids (regular faces, so the rosette engine handles them directly)
+    cuboctahedron: { label: "Cuboctahedron", verts: allp([1, 1, 0]) },
+    truncatedOctahedron: { label: "Truncated octahedron", verts: allp([0, 1, 2]) },
+    truncatedCube: { label: "Truncated cube", verts: allp([Math.SQRT2 - 1, 1, 1]) },
+    icosidodecahedron: { label: "Icosidodecahedron", verts: cat(cyc([0, 0, PHI]), cyc([0.5, PHI / 2, P2 / 2])) },
+    truncatedCuboctahedron: { label: "Truncated cuboctahedron", verts: allp([1, 1 + Math.SQRT2, 1 + 2 * Math.SQRT2]) },
+    truncatedIcosahedron: { label: "Truncated icosahedron (soccer ball)", verts: cat(cyc([0, 1, 3 * PHI]), cyc([1, 2 + PHI, 2 * PHI]), cyc([PHI, 2, 2 * PHI + 1])) },
+    truncatedDodecahedron: { label: "Truncated dodecahedron", verts: cat(cyc([0, 1 / PHI, 2 + PHI]), cyc([1 / PHI, PHI, 2 * PHI]), cyc([PHI, 2, PHI + 1])) },
+    truncatedIcosidodecahedron: { label: "Truncated icosidodecahedron", verts: cat(cyc([1 / PHI, 1 / PHI, 3 + PHI]), cyc([2 / PHI, PHI, 1 + 2 * PHI]), cyc([1 / PHI, P2, -1 + 3 * PHI]), cyc([2 * PHI - 1, 2, 2 + PHI]), cyc([PHI, 3, 2 * PHI])) }
   };
 
   // min-distance edges

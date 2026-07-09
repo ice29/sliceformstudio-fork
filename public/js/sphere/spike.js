@@ -226,9 +226,11 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  // reset the contact-angle slider's range + default for the given motif & face
+  // the largest face size of a solid (drives the default contact angle; for mixed
+  // Archimedean solids the biggest face gives the richest, most permissive motif)
   function faceSize(solidName) {
-    return window.SpherePattern.extractFaces(window.SpherePattern.POLYHEDRA[solidName].verts)[0].length;
+    return window.SpherePattern.extractFaces(window.SpherePattern.POLYHEDRA[solidName].verts)
+      .reduce(function (m, f) { return Math.max(m, f.length); }, 0);
   }
   function resetAngleSlider(style, n) {
     var el = document.getElementById("contactAngle"), min, max, def;

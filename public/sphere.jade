@@ -22,11 +22,20 @@
           option(value="gc:ico10") 10 great circles (icosahedral)
           option(value="gc:ico15", selected) 15 great circles (icosahedral)
           option(value="gc:ico31") 31 great circles (icosahedral)
-        optgroup(label="Spherical pattern (Islamic motif)")
-          option(value="pat:cube") Cube — star motif
-          option(value="pat:octahedron") Octahedron — star motif
-          option(value="pat:icosahedron") Icosahedron — star motif
-          option(value="pat:dodecahedron") Dodecahedron — star motif
+        optgroup(label="Spherical pattern — Platonic")
+          option(value="pat:cube") Cube
+          option(value="pat:octahedron") Octahedron
+          option(value="pat:icosahedron") Icosahedron
+          option(value="pat:dodecahedron") Dodecahedron
+        optgroup(label="Spherical pattern — Archimedean")
+          option(value="pat:cuboctahedron") Cuboctahedron
+          option(value="pat:truncatedOctahedron") Truncated octahedron
+          option(value="pat:truncatedCube") Truncated cube
+          option(value="pat:icosidodecahedron") Icosidodecahedron
+          option(value="pat:truncatedCuboctahedron") Truncated cuboctahedron
+          option(value="pat:truncatedIcosahedron") Truncated icosahedron (soccer ball)
+          option(value="pat:truncatedDodecahedron") Truncated dodecahedron
+          option(value="pat:truncatedIcosidodecahedron") Truncated icosidodecahedron
     label.checkbox-inline(style="margin-left: 20px")
       input#showSphere(type="checkbox", checked)
       |  Show sphere
