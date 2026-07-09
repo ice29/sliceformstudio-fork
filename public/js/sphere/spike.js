@@ -161,7 +161,9 @@
     if (document.getElementById("showSphere").checked) group.add(sphereMesh);
     var skip = +document.getElementById("skip").value;
     var style = document.getElementById("motifStyle").value;
-    var m = window.SpherePatternStrips.build(name, { radius: R, depth: skip, style: style });
+    var angleDeg = +document.getElementById("contactAngle").value;
+    document.getElementById("contactAngleVal").textContent = angleDeg.toFixed(1) + "°";
+    var m = window.SpherePatternStrips.build(name, { radius: R, depth: skip, style: style, angleDeg: angleDeg });
 
     // faint base-polyhedron edges for reference
     var seen = {};
@@ -209,7 +211,8 @@
     var model = window.SpherePatternStrips.build(patSolid, {
       radius: +document.getElementById("patRadius").value,
       depth: +document.getElementById("skip").value,
-      style: document.getElementById("motifStyle").value
+      style: document.getElementById("motifStyle").value,
+      angleDeg: +document.getElementById("contactAngle").value
     });
     var svg = window.SpherePatternStrips.stripsToSVG(model, {
       scale: 1, stripHeight: +document.getElementById("patStripHeight").value,
@@ -223,6 +226,18 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
+  // reset the contact-angle slider's range + default for the given motif & face
+  function faceSize(solidName) {
+    return window.SpherePattern.extractFaces(window.SpherePattern.POLYHEDRA[solidName].verts)[0].length;
+  }
+  function resetAngleSlider(style, n) {
+    var el = document.getElementById("contactAngle"), min, max, def;
+    if (style === "star") { min = 180 / n; max = 90; def = 90 - 180 / (2 * n); }
+    else { min = 1; max = 90 - 45 * (n - 2) / n; def = 180 / n; }
+    el.min = min.toFixed(1); el.max = max.toFixed(1); el.step = 0.5; el.value = def.toFixed(1);
+    document.getElementById("contactAngleVal").textContent = (+el.value).toFixed(1) + "°";
+  }
+
   // ---- dispatch + wiring --------------------------------------------------------
   function draw() {
     var val = document.getElementById("modelSelect").value;
@@ -230,6 +245,13 @@
     if (parts[0] === "solid") { renderSolid(parts[1]); document.getElementById("patPanel").style.display = "none"; }
     else if (parts[0] === "pat") renderPattern(parts[1]);
     else { renderGreatCircles(parts[1]); document.getElementById("patPanel").style.display = "none"; }
+  }
+
+  // when the solid or motif changes, reset the angle slider to that motif's default
+  function drawResettingAngle() {
+    var parts = document.getElementById("modelSelect").value.split(":");
+    if (parts[0] === "pat") resetAngleSlider(document.getElementById("motifStyle").value, faceSize(parts[1]));
+    draw();
   }
 
   function exportSVG() {
@@ -249,12 +271,13 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  document.getElementById("modelSelect").addEventListener("change", draw);
+  document.getElementById("modelSelect").addEventListener("change", drawResettingAngle);
   document.getElementById("showSphere").addEventListener("change", draw);
   document.getElementById("showCrossings").addEventListener("change", draw);
   document.getElementById("radius").addEventListener("change", draw);
   document.getElementById("skip").addEventListener("change", draw);
-  document.getElementById("motifStyle").addEventListener("change", draw);
+  document.getElementById("motifStyle").addEventListener("change", drawResettingAngle);
+  document.getElementById("contactAngle").addEventListener("input", draw);
   document.getElementById("patRadius").addEventListener("change", draw);
   document.getElementById("colorByStrip").addEventListener("change", draw);
   document.getElementById("exportBtn").addEventListener("click", exportSVG);
