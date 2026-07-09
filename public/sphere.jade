@@ -38,7 +38,12 @@
     p#patStats.text-muted(style="margin-bottom: 10px")
     .form-inline
       .form-group(style="margin-right: 15px")
-        label(style="margin-right: 6px") Star skip
+        label(style="margin-right: 6px") Motif
+        select#motifStyle.form-control(style="width: 110px")
+          option(value="rosette", selected) Rosette
+          option(value="star") Star
+      .form-group(style="margin-right: 15px")
+        label(style="margin-right: 6px") Depth
         input#skip.form-control(type="number", value="2", min="1", max="6", step="1", style="width: 70px")
       .form-group(style="margin-right: 15px")
         label(style="margin-right: 6px") Strip width (mm)
@@ -96,5 +101,6 @@
   script(src="bower/three/OrbitControls.js")
   script(src="js/sphere/geometry.js")
   script(src="js/sphere/pattern.js")
+  script(src="js/sphere/rosette.js")
   script(src="js/sphere/patternstrips.js")
   script(src="js/sphere/spike.js")

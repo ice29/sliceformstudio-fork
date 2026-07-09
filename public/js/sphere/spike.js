@@ -160,7 +160,8 @@
     patSolid = name;
     if (document.getElementById("showSphere").checked) group.add(sphereMesh);
     var skip = +document.getElementById("skip").value;
-    var m = window.SpherePatternStrips.build(name, { radius: R, skip: skip });
+    var style = document.getElementById("motifStyle").value;
+    var m = window.SpherePatternStrips.build(name, { radius: R, depth: skip, style: style });
 
     // faint base-polyhedron edges for reference
     var seen = {};
@@ -182,15 +183,9 @@
     });
     var oneMat = new THREE.MeshPhongMaterial({ color: 0x8250df, shininess: 30 });
     m.chords.forEach(function (c) {
-      var pts = [];
-      for (var t = 0; t <= 10; t++) {
-        var f = t / 10;
-        pts.push(new THREE.Vector3(
-          c.aFlat[0] * (1 - f) + c.bFlat[0] * f,
-          c.aFlat[1] * (1 - f) + c.bFlat[1] * f,
-          c.aFlat[2] * (1 - f) + c.bFlat[2] * f).normalize().multiplyScalar(R));
-      }
-      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.018 * R, 8, false), byStrip ? mats[c.strip || 0] : oneMat));
+      var pts = c.poly3.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
+      if (pts.length < 2) return;
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 4, 0.016 * R, 8, false), byStrip ? mats[c.strip || 0] : oneMat));
     });
 
     // crossing markers
@@ -213,7 +208,8 @@
   function patternExport() {
     var model = window.SpherePatternStrips.build(patSolid, {
       radius: +document.getElementById("patRadius").value,
-      skip: +document.getElementById("skip").value
+      depth: +document.getElementById("skip").value,
+      style: document.getElementById("motifStyle").value
     });
     var svg = window.SpherePatternStrips.stripsToSVG(model, {
       scale: 1, stripHeight: +document.getElementById("patStripHeight").value,
@@ -258,6 +254,7 @@
   document.getElementById("showCrossings").addEventListener("change", draw);
   document.getElementById("radius").addEventListener("change", draw);
   document.getElementById("skip").addEventListener("change", draw);
+  document.getElementById("motifStyle").addEventListener("change", draw);
   document.getElementById("patRadius").addEventListener("change", draw);
   document.getElementById("colorByStrip").addEventListener("change", draw);
   document.getElementById("exportBtn").addEventListener("click", exportSVG);
