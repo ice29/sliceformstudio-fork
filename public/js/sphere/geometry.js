@@ -46,7 +46,6 @@
   }
 
   var ICOSA = cyclic([0, 1, PHI]);            // 12 vertices  (5-fold axes)
-  var DODECA = signs([1, 1, 1]).concat(cyclic([0, 1 / PHI, PHI])); // 20 (3-fold axes)
 
   // edges = vertex pairs at the minimum distance
   function edges(verts) {
@@ -78,17 +77,38 @@
     }));
   }
 
+  // face centres (triples of mutually-adjacent vertices) -> 3-fold axis directions.
+  // Derived from ICOSA itself so all three families share one orientation; using a
+  // separately-defined dodecahedron would be in a different frame and break the
+  // icosahedral symmetry of the 10- and 31-circle unions.
+  function faceCenterDirs(verts) {
+    var e = edges(verts), adj = {};
+    e.forEach(function (p) { adj[p[0] + "_" + p[1]] = true; });
+    function isEdge(a, b) { return adj[Math.min(a, b) + "_" + Math.max(a, b)]; }
+    var centers = [];
+    for (var a = 0; a < verts.length; a++)
+      for (var b = a + 1; b < verts.length; b++)
+        for (var c = b + 1; c < verts.length; c++)
+          if (isEdge(a, b) && isEdge(a, c) && isEdge(b, c))
+            centers.push(unit(scale(add(add(verts[a], verts[b]), verts[c]), 1 / 3)));
+    return dedupeAntipodal(centers);
+  }
+
   // ---- great-circle arrangements (normals) --------------------------------------
-  // Icosahedral families: 6 = 5-fold axes (icosa verts), 10 = 3-fold axes (dodeca
-  // verts), 15 = 2-fold axes (edge midpoints). 31 = their union.
+  // Icosahedral families, all derived from the same ICOSA frame: 6 = 5-fold axes
+  // (vertices), 10 = 3-fold axes (face centres), 15 = 2-fold axes (edge midpoints).
+  // 31 = their union.
+  var ICO_5FOLD = dedupeAntipodal(ICOSA);
+  var ICO_3FOLD = faceCenterDirs(ICOSA);
+  var ICO_2FOLD = edgeMidpointDirs(ICOSA);
   var ARRANGEMENTS = {
     ortho3: { label: "3 orthogonal circles", normals: [[1, 0, 0], [0, 1, 0], [0, 0, 1]] },
-    ico6: { label: "6 great circles (icosahedral)", normals: dedupeAntipodal(ICOSA) },
-    ico10: { label: "10 great circles (icosahedral)", normals: dedupeAntipodal(DODECA) },
-    ico15: { label: "15 great circles (icosahedral)", normals: edgeMidpointDirs(ICOSA) },
+    ico6: { label: "6 great circles (icosahedral)", normals: ICO_5FOLD },
+    ico10: { label: "10 great circles (icosahedral)", normals: ICO_3FOLD },
+    ico15: { label: "15 great circles (icosahedral)", normals: ICO_2FOLD },
     ico31: {
       label: "31 great circles (icosahedral)",
-      normals: dedupeAntipodal([].concat(ICOSA, DODECA, edgeMidpointDirs(ICOSA)))
+      normals: dedupeAntipodal([].concat(ICO_5FOLD, ICO_3FOLD, ICO_2FOLD))
     }
   };
 
