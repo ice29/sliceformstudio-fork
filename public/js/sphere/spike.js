@@ -149,34 +149,71 @@
     document.getElementById("gcPanel").style.display = "block";
   }
 
-  // ---- Phase 2a: spherical Islamic pattern --------------------------------------
-  var patMat = new THREE.MeshPhongMaterial({ color: 0x8250df, shininess: 30 });
+  // ---- Phase 2b: traced pattern sliceform ---------------------------------------
   var faintMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+  var patSolid = null;
+
+  function stripColor(i, n) { var c = new THREE.Color(); c.setHSL((i / n) % 1, 0.62, 0.55); return c; }
 
   function renderPattern(name) {
     clearGroup();
+    patSolid = name;
     if (document.getElementById("showSphere").checked) group.add(sphereMesh);
-    var theta = +document.getElementById("contactAngle").value;
-    var pat = window.SpherePattern.buildPattern(name, { radius: R, contactAngleDeg: theta, samples: 10 });
+    var skip = +document.getElementById("skip").value;
+    var m = window.SpherePatternStrips.build(name, { radius: R, skip: skip });
 
     // faint base-polyhedron edges for reference
-    pat.edges.forEach(function (e) {
-      var arc = arcPoints(scaleV(e[0], R), scaleV(e[1], R), 32);
-      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arc), 32, 0.004 * R, 6, false), faintMat));
+    var seen = {};
+    m.faces.forEach(function (f) {
+      for (var i = 0; i < f.length; i++) {
+        var a = f[i], b = f[(i + 1) % f.length], key = Math.min(a, b) + "_" + Math.max(a, b);
+        if (seen[key]) continue; seen[key] = 1;
+        var arc = arcPoints(scaleV(m.verts[a], R), scaleV(m.verts[b], R), 24);
+        group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arc), 24, 0.003 * R, 5, false), faintMat));
+      }
     });
 
-    // the projected motif curves
-    pat.motifs.forEach(function (poly) {
-      var pts = poly.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
-      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 2, 0.016 * R, 8, false), patMat));
+    // one coloured tube per traced strip
+    m.strips.forEach(function (strip, si) {
+      if (strip.points.length < 2) return;
+      var pts = strip.points.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); });
+      var mat = new THREE.MeshPhongMaterial({ color: stripColor(si, m.strips.length), shininess: 30 });
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), pts.length * 2, 0.015 * R, 8, true), mat));
     });
+
+    // crossing markers
+    if (document.getElementById("showCrossings").checked) {
+      m.crossings.forEach(function (x) {
+        var mk = new THREE.Mesh(new THREE.SphereGeometry(0.02 * R, 12, 12), simpleMat);
+        mk.position.set(x.pos[0], x.pos[1], x.pos[2]); group.add(mk);
+      });
+    }
 
     document.getElementById("gcPanel").style.display = "none";
     document.getElementById("patPanel").style.display = "block";
-    document.getElementById("contactAngleVal").textContent = theta + "°";
+    document.getElementById("patStats").innerHTML =
+      "<b>" + m.stripCount + "</b> strips &middot; <b>" + m.crossings.length + "</b> crossings &middot; <b>" +
+      m.chords.length + "</b> chords";
   }
 
   function scaleV(v, s) { return [v[0] * s, v[1] * s, v[2] * s]; }
+
+  function patternExport() {
+    var model = window.SpherePatternStrips.build(patSolid, {
+      radius: +document.getElementById("patRadius").value,
+      skip: +document.getElementById("skip").value
+    });
+    var svg = window.SpherePatternStrips.stripsToSVG(model, {
+      scale: 1, stripHeight: +document.getElementById("patStripHeight").value,
+      split: +document.getElementById("patSplit").value
+    });
+    var blob = new Blob([svg], { type: "image/svg+xml" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "spherical_pattern_" + patSolid + "_strips.svg";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
 
   // ---- dispatch + wiring --------------------------------------------------------
   function draw() {
@@ -208,8 +245,10 @@
   document.getElementById("showSphere").addEventListener("change", draw);
   document.getElementById("showCrossings").addEventListener("change", draw);
   document.getElementById("radius").addEventListener("change", draw);
-  document.getElementById("contactAngle").addEventListener("input", draw);
+  document.getElementById("skip").addEventListener("change", draw);
+  document.getElementById("patRadius").addEventListener("change", draw);
   document.getElementById("exportBtn").addEventListener("click", exportSVG);
+  document.getElementById("patExportBtn").addEventListener("click", patternExport);
   window.addEventListener("resize", function () {
     camera.aspect = aspect(); camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);

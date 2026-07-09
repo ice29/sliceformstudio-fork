@@ -35,15 +35,31 @@
       |  Show crossings
 
   #patPanel(style="margin: 10px 0; display: none")
+    p#patStats.text-muted(style="margin-bottom: 10px")
     .form-inline
-      .form-group
-        label(style="margin-right: 8px") Contact angle
-        input#contactAngle(type="range", min="12", max="78", value="30", step="1", style="vertical-align: middle; width: 220px")
-        span#contactAngleVal.text-muted(style="margin-left: 8px") 30°
-      span.text-muted(style="margin-left: 20px; font-size: 12px")
-        | Star motif built on each face (Hankin's method) and projected onto the sphere.
-        | Adjusting the contact angle changes the star; lines join across edges into
-        | continuous curves — the future pattern strips.
+      .form-group(style="margin-right: 15px")
+        label(style="margin-right: 6px") Star skip
+        input#skip.form-control(type="number", value="2", min="1", max="6", step="1", style="width: 70px")
+      .form-group(style="margin-right: 15px")
+        label(style="margin-right: 6px") Strip width (mm)
+        input#patStripHeight.form-control(type="number", value="8", min="2", max="40", step="1", style="width: 80px")
+      .form-group(style="margin-right: 15px")
+        label(style="margin-right: 6px") Radius (mm)
+        input#patRadius.form-control(type="number", value="80", min="20", max="300", step="5", style="width: 85px")
+      .form-group(style="margin-right: 15px")
+        label(style="margin-right: 6px") Cut strip into
+        select#patSplit.form-control(style="width: 110px")
+          option(value="1") 1 arc
+          option(value="2", selected) 2 arcs
+          option(value="3") 3 arcs
+      button#patExportBtn.btn.btn-primary
+        i.fa.fa-download
+        |  Export cutting strips (SVG)
+    p.text-muted(style="margin-top: 8px; font-size: 12px")
+      | Each face carries an {n/skip} star (e.g. skip 2 = pentagram); the chords cross
+      | to form the slots and the lines are traced into continuous strips across the
+      | sphere (each colour = one strip). Every strip develops to a curved annular
+      | sector; it is cut open into arcs to be woven together.
 
   #sphereCanvas(style="width: 100%; height: 560px; background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px")
 
@@ -77,4 +93,5 @@
   script(src="bower/three/OrbitControls.js")
   script(src="js/sphere/geometry.js")
   script(src="js/sphere/pattern.js")
+  script(src="js/sphere/patternstrips.js")
   script(src="js/sphere/spike.js")
