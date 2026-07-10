@@ -215,7 +215,8 @@
     });
     var svg = window.SpherePatternStrips.stripsToSVG(model, {
       scale: 1, stripHeight: +document.getElementById("patStripHeight").value,
-      split: +document.getElementById("patSplit").value
+      split: +document.getElementById("patSplit").value,
+      title: patSolid + " (" + document.getElementById("motifStyle").value + ")"
     });
     var blob = new Blob([svg], { type: "image/svg+xml" });
     var url = URL.createObjectURL(blob);

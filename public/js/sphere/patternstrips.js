@@ -226,6 +226,8 @@
     var Rpx = model.radius * scaleF, ri = Rpx - hpx / 2, ro = Rpx + hpx / 2;
     var els = [];
 
+    var tabAng = (opts.joinTabs === false) ? 0 : Math.min(0.14, hpx / Rpx * 2);
+    var nStrips = model.strips.length;
     var pieces = [];
     model.strips.forEach(function (strip) {
       var span = strip.arcLen / model.radius;
@@ -238,30 +240,36 @@
         var a1 = (s1 >= N) ? span : (slots[s1 - 1].ang + slots[s1].ang) / 2;
         var ps = [];
         for (var c = s0; c < s1; c++) ps.push({ ang: slots[c].ang, edge: slots[c].edge });
-        pieces.push({ a0: a0, a1: a1, slots: ps, label: "#" + strip.index + "." + m });
+        pieces.push({ a0: a0, a1: a1, slots: ps, strip: strip.index, color: hsl(strip.index, nStrips), label: "#" + strip.index + "." + m + "/" + k });
       }
     });
 
-    var margin = 20, pad = Math.max(16, hpx * 1.5), cell = 2 * ro + pad;
+    var headH = 34;
+    var margin = 20, pad = Math.max(20, hpx * 1.8), cell = 2 * (ro + tabAng * Rpx) + pad;
     var cols = Math.ceil(Math.sqrt(pieces.length)), rows = Math.ceil(pieces.length / cols);
     var kerf = 1.4 * scaleF;
     pieces.forEach(function (p, i) {
-      var cx = margin + (i % cols) * cell + cell / 2, cy = margin + Math.floor(i / cols) * cell + cell / 2;
-      els.push(sector(cx, cy, ri, ro, p.a0, p.a1, "#0000ff"));
+      var cx = margin + (i % cols) * cell + cell / 2, cy = headH + margin + Math.floor(i / cols) * cell + cell / 2;
+      // strip body (its own colour) + a glue tab past the end that reconnects the arc loop
+      els.push(sector(cx, cy, ri, ro, p.a0, p.a1 + tabAng, p.color));
+      if (tabAng > 0) els.push(score(cx, cy, ri, ro, p.a1)); // fold line at the join
       var dA = (kerf / 2) / Rpx;
       p.slots.forEach(function (sl) {
         var fromR = (sl.edge === 0) ? ro : ri;
         els.push(notch(cx, cy, fromR, Rpx, sl.ang, dA));
       });
       var mid = (p.a0 + p.a1) / 2, lp = pt(cx, cy, Rpx, mid);
-      els.push(text(lp[0], lp[1], p.label));
+      els.push(text(lp[0], lp[1], p.label, p.color));
     });
 
-    var W = Math.ceil(cols * cell + 2 * margin), H = Math.ceil(rows * cell + 2 * margin);
+    var W = Math.ceil(cols * cell + 2 * margin), H = Math.ceil(headH + rows * cell + 2 * margin);
+    var title = "Spherical sliceform — " + (opts.title || "") + "  ·  " + nStrips + " strips, cut into " + split +
+      "  ·  same colour = one strip (join its arcs in order via the red tabs)  ·  black = interlocking slot";
     return [
       "<?xml version='1.0' encoding='utf-8'?>",
       "<svg xmlns='http://www.w3.org/2000/svg' width='" + W + "' height='" + H + "' viewBox='0 0 " + W + " " + H + "'>",
-      "<style>path{fill:none;stroke-width:1}text{font:9px sans-serif;fill:#333;text-anchor:middle}</style>",
+      "<style>path{fill:none;stroke-width:1}text{font:9px sans-serif;text-anchor:middle}</style>",
+      "<text x='" + margin + "' y='20' style='font:13px sans-serif;fill:#111' text-anchor='start'>" + title + "</text>",
       els.join(""), "</svg>"
     ].join("");
 
@@ -278,7 +286,13 @@
       return "<path d='M" + r(s1o[0]) + " " + r(s1o[1]) + "L" + r(s1i[0]) + " " + r(s1i[1]) +
         "L" + r(s2i[0]) + " " + r(s2i[1]) + "L" + r(s2o[0]) + " " + r(s2o[1]) + "' stroke='#000000'/>";
     }
-    function text(x, y, t) { return "<text x='" + r(x) + "' y='" + r(y + 3) + "'>" + t + "</text>"; }
+    // red fold/score line marking where the glue tab starts
+    function score(cx, cy, ri, ro, ang) {
+      var a = pt(cx, cy, ri, ang), b = pt(cx, cy, ro, ang);
+      return "<path d='M" + r(a[0]) + " " + r(a[1]) + "L" + r(b[0]) + " " + r(b[1]) + "' stroke='#ff0000'/>";
+    }
+    function text(x, y, t, c) { return "<text x='" + r(x) + "' y='" + r(y + 3) + "' fill='" + (c || "#333") + "'>" + t + "</text>"; }
+    function hsl(i, n) { return "hsl(" + Math.round((i / n) * 360) + ",62%,45%)"; }
     function r(n) { return Math.round(n * 100) / 100; }
   }
 
