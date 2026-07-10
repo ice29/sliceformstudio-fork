@@ -200,7 +200,8 @@
     document.getElementById("patPanel").style.display = "block";
     document.getElementById("patStats").innerHTML =
       "<b>" + m.stripCount + "</b> strips &middot; <b>" + m.crossings.length + "</b> crossings &middot; <b>" +
-      m.chords.length + "</b> chords";
+      m.chords.length + "</b> chords &middot; weave: all interlock" +
+      (m.weaveConflicts ? ", <span style='color:#d1242f'>" + m.weaveConflicts + " non-alternating</span>" : " &amp; fully alternating");
   }
 
   function scaleV(v, s) { return [v[0] * s, v[1] * s, v[2] * s]; }

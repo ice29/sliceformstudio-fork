@@ -156,10 +156,61 @@
       return { index: si, arcLen: arc, slots: slots, points: pts };
     });
 
+    var weave = solveWeave(stripData);
+
     return {
       radius: R, faces: faces, verts: verts.map(unit),
-      chords: patterns, crossings: crossings, strips: stripData, stripCount: stripData.length
+      chords: patterns, crossings: crossings, strips: stripData, stripCount: stripData.length,
+      weaveConflicts: weave.conflicts
     };
+  }
+
+  // Over/under weave. The variable is per CROSSING: which of its two strips is
+  // "over". That makes the interlock constraint automatic — the two strips always
+  // get opposite slot edges. Separately we prefer a plain weave, i.e. each strip
+  // alternates over/under along its length; consecutive crossings on a strip give
+  // an XOR constraint between their crossing-variables, solved with weighted
+  // union-find. Where the constraint graph has an odd cycle the alternation can't
+  // hold (counted as a conflict) but the interlock is never broken. Sets slot.edge.
+  function solveWeave(stripData) {
+    var inc = {};   // xi -> [{strip, slot}]
+    stripData.forEach(function (s, si) {
+      s.slots.sort(function (a, b) { return a.pos - b.pos; });
+      s.slots.forEach(function (sl) { (inc[sl.xi] = inc[sl.xi] || []).push({ strip: si, slot: sl }); });
+    });
+    var xis = Object.keys(inc), id = {};
+    xis.forEach(function (xi, i) { id[xi] = i; });
+    var lowAt = {}; // xi -> lower strip index
+    xis.forEach(function (xi) { var a = inc[xi]; lowAt[xi] = a.length === 2 ? Math.min(a[0].strip, a[1].strip) : a[0].strip; });
+
+    var parent = xis.map(function (_, i) { return i; }), rel = xis.map(function () { return 0; });
+    function find(x) {
+      if (parent[x] === x) return { root: x, par: 0 };
+      var f = find(parent[x]); parent[x] = f.root; rel[x] = rel[x] ^ f.par; return { root: f.root, par: rel[x] };
+    }
+    function low(xi, si) { return lowAt[xi] === si ? 1 : 0; }
+
+    var conflicts = 0;
+    stripData.forEach(function (s, si) {
+      var k = s.slots.length;
+      for (var i = 0; i < k; i++) {
+        var A = s.slots[i].xi, Bi = (i + 1) % k, B = s.slots[Bi].xi;
+        if (k > 1 && i === k - 1 && (k % 2 === 1)) continue; // don't force the odd-loop seam
+        var want = 1 ^ low(A, si) ^ low(B, si);
+        var fa = find(id[A]), fb = find(id[B]);
+        if (fa.root === fb.root) { if ((fa.par ^ fb.par) !== want) conflicts++; }
+        else { parent[fb.root] = fa.root; rel[fb.root] = fa.par ^ fb.par ^ want; }
+      }
+    });
+
+    xis.forEach(function (xi) {
+      var o = find(id[xi]).par;
+      inc[xi].forEach(function (e) {
+        var over = o ^ 1 ^ low(xi, e.strip); // lower strip over when o=1
+        e.slot.edge = over ? 0 : 1;           // over -> cut from outer edge
+      });
+    });
+    return { conflicts: conflicts };
   }
 
   // ---- developed cutting template ----------------------------------------------
@@ -178,14 +229,15 @@
     var pieces = [];
     model.strips.forEach(function (strip) {
       var span = strip.arcLen / model.radius;
-      var slots = strip.slots.map(function (sl) { return sl.pos / model.radius; }).sort(function (a, b) { return a - b; });
+      var slots = strip.slots.map(function (sl) { return { ang: sl.pos / model.radius, edge: sl.edge }; })
+        .sort(function (a, b) { return a.ang - b.ang; });
       var N = slots.length, k = Math.max(1, Math.min(split, N || 1));
       for (var m = 0; m < k; m++) {
         var s0 = Math.round(m * N / k), s1 = Math.round((m + 1) * N / k);
-        var a0 = (s0 === 0) ? 0 : (slots[s0 - 1] + slots[s0]) / 2;
-        var a1 = (s1 >= N) ? span : (slots[s1 - 1] + slots[s1]) / 2;
+        var a0 = (s0 === 0) ? 0 : (slots[s0 - 1].ang + slots[s0].ang) / 2;
+        var a1 = (s1 >= N) ? span : (slots[s1 - 1].ang + slots[s1].ang) / 2;
         var ps = [];
-        for (var c = s0; c < s1; c++) ps.push({ ang: slots[c], edge: c % 2 });
+        for (var c = s0; c < s1; c++) ps.push({ ang: slots[c].ang, edge: slots[c].edge });
         pieces.push({ a0: a0, a1: a1, slots: ps, label: "#" + strip.index + "." + m });
       }
     });
