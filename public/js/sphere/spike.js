@@ -216,6 +216,7 @@
     var svg = window.SpherePatternStrips.stripsToSVG(model, {
       scale: 1, stripHeight: +document.getElementById("patStripHeight").value,
       split: +document.getElementById("patSplit").value,
+      materialThickness: +document.getElementById("patThickness").value,
       title: patSolid + " (" + document.getElementById("motifStyle").value + ")"
     });
     var blob = new Blob([svg], { type: "image/svg+xml" });

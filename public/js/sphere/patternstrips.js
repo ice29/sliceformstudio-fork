@@ -247,7 +247,10 @@
     var headH = 34;
     var margin = 20, pad = Math.max(20, hpx * 1.8), cell = 2 * (ro + tabAng * Rpx) + pad;
     var cols = Math.ceil(Math.sqrt(pieces.length)), rows = Math.ceil(pieces.length / cols);
-    var kerf = 1.4 * scaleF;
+    // slot width must clear the crossing strip's material (thickness + a little play)
+    var thickness = opts.materialThickness != null ? opts.materialThickness : 0.3;
+    var clearance = opts.clearance != null ? opts.clearance : 0.15;
+    var kerf = (thickness + clearance) * scaleF;
     pieces.forEach(function (p, i) {
       var cx = margin + (i % cols) * cell + cell / 2, cy = headH + margin + Math.floor(i / cols) * cell + cell / 2;
       // strip body (its own colour) + a glue tab past the end that reconnects the arc loop
@@ -263,13 +266,17 @@
     });
 
     var W = Math.ceil(cols * cell + 2 * margin), H = Math.ceil(headH + rows * cell + 2 * margin);
-    var title = "Spherical sliceform — " + (opts.title || "") + "  ·  " + nStrips + " strips, cut into " + split +
-      "  ·  same colour = one strip (join its arcs in order via the red tabs)  ·  black = interlocking slot";
+    var diameter = (2 * model.radius).toFixed(0);
+    var title = "Spherical sliceform — " + (opts.title || "") + "  ·  " + nStrips + " strips, each cut into " + split + " arcs (" + pieces.length + " pieces)";
+    var dims = "Ø " + diameter + " mm · strip width " + (opts.stripHeight || 8) + " mm · slot " + (thickness + clearance).toFixed(2) +
+      " mm (material " + thickness + " mm) · same colour = one strip: join its arcs in order at the red glue tabs · black = interlocking slot (alternate outer/inner edge)";
+    // print at true scale: 1 user unit = 1 mm
     return [
       "<?xml version='1.0' encoding='utf-8'?>",
-      "<svg xmlns='http://www.w3.org/2000/svg' width='" + W + "' height='" + H + "' viewBox='0 0 " + W + " " + H + "'>",
-      "<style>path{fill:none;stroke-width:1}text{font:9px sans-serif;text-anchor:middle}</style>",
-      "<text x='" + margin + "' y='20' style='font:13px sans-serif;fill:#111' text-anchor='start'>" + title + "</text>",
+      "<svg xmlns='http://www.w3.org/2000/svg' width='" + W + "mm' height='" + H + "mm' viewBox='0 0 " + W + " " + H + "'>",
+      "<style>path{fill:none;stroke-width:0.3}text{font:3px sans-serif;text-anchor:middle}</style>",
+      "<text x='" + margin + "' y='16' style='font:6px sans-serif;fill:#111' text-anchor='start'>" + title + "</text>",
+      "<text x='" + margin + "' y='27' style='font:5px sans-serif;fill:#555' text-anchor='start'>" + dims + "</text>",
       els.join(""), "</svg>"
     ].join("");
 
