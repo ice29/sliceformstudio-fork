@@ -161,9 +161,7 @@
     if (document.getElementById("showSphere").checked) group.add(sphereMesh);
     var skip = +document.getElementById("skip").value;
     var style = document.getElementById("motifStyle").value;
-    var angleDeg = +document.getElementById("contactAngle").value;
-    document.getElementById("contactAngleVal").textContent = angleDeg.toFixed(1) + "°";
-    var m = window.SpherePatternStrips.build(name, { radius: R, depth: skip, style: style, angleDeg: angleDeg });
+    var m = window.SpherePatternStrips.build(name, { radius: R, depth: skip, style: style, angles: currentAngles() });
 
     // faint base-polyhedron edges for reference
     var seen = {};
@@ -212,7 +210,7 @@
       radius: +document.getElementById("patRadius").value,
       depth: +document.getElementById("skip").value,
       style: document.getElementById("motifStyle").value,
-      angleDeg: +document.getElementById("contactAngle").value
+      angles: currentAngles()
     });
     var svg = window.SpherePatternStrips.stripsToSVG(model, {
       scale: 1, stripHeight: +document.getElementById("patStripHeight").value,
@@ -226,18 +224,49 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  // the largest face size of a solid (drives the default contact angle; for mixed
-  // Archimedean solids the biggest face gives the richest, most permissive motif)
-  function faceSize(solidName) {
-    return window.SpherePattern.extractFaces(window.SpherePattern.POLYHEDRA[solidName].verts)
-      .reduce(function (m, f) { return Math.max(m, f.length); }, 0);
+  // distinct face sizes of a solid (a mixed Archimedean solid gets one control each)
+  function faceSizes(solidName) {
+    var seen = {};
+    window.SpherePattern.extractFaces(window.SpherePattern.POLYHEDRA[solidName].verts)
+      .forEach(function (f) { seen[f.length] = 1; });
+    return Object.keys(seen).map(Number).sort(function (a, b) { return a - b; });
   }
-  function resetAngleSlider(style, n) {
-    var el = document.getElementById("contactAngle"), min, max, def;
-    if (style === "star") { min = 180 / n; max = 90; def = 90 - 180 / (2 * n); }
-    else { min = 1; max = 90 - 45 * (n - 2) / n; def = 180 / n; }
-    el.min = min.toFixed(1); el.max = max.toFixed(1); el.step = 0.5; el.value = def.toFixed(1);
-    document.getElementById("contactAngleVal").textContent = (+el.value).toFixed(1) + "°";
+  function angleRange(style, n) {
+    return style === "star"
+      ? { min: 180 / n, max: 90, def: 90 - 180 / (2 * n) }
+      : { min: 1, max: 90 - 45 * (n - 2) / n, def: 180 / n };
+  }
+  // (re)build one contact-angle slider per face size of the current solid+motif
+  function buildAngleControls(style, sizes) {
+    var host = document.getElementById("angleControls");
+    host.innerHTML = "";
+    sizes.forEach(function (n) {
+      var rng = angleRange(style, n);
+      var group = document.createElement("span");
+      group.className = "form-group";
+      group.style.marginRight = "22px";
+      var label = document.createElement("label");
+      label.style.marginRight = "6px";
+      label.textContent = n + "-gon angle";
+      var input = document.createElement("input");
+      input.type = "range"; input.id = "angle_" + n; input.dataset.n = n;
+      input.min = rng.min.toFixed(1); input.max = rng.max.toFixed(1); input.step = "0.5";
+      input.value = rng.def.toFixed(1); input.style.verticalAlign = "middle"; input.style.width = "150px";
+      var val = document.createElement("span");
+      val.className = "text-muted"; val.id = "angleVal_" + n;
+      val.style.marginLeft = "6px"; val.textContent = (+input.value).toFixed(1) + "°";
+      input.addEventListener("input", function () { val.textContent = (+input.value).toFixed(1) + "°"; draw(); });
+      group.appendChild(label); group.appendChild(input); group.appendChild(val);
+      host.appendChild(group);
+    });
+  }
+  // read the per-face-size angles into a map { n: degrees }
+  function currentAngles() {
+    var out = {};
+    Array.prototype.forEach.call(document.querySelectorAll("#angleControls input"), function (el) {
+      out[+el.dataset.n] = +el.value;
+    });
+    return out;
   }
 
   // ---- dispatch + wiring --------------------------------------------------------
@@ -249,10 +278,10 @@
     else { renderGreatCircles(parts[1]); document.getElementById("patPanel").style.display = "none"; }
   }
 
-  // when the solid or motif changes, reset the angle slider to that motif's default
+  // when the solid or motif changes, rebuild the per-face-size angle controls
   function drawResettingAngle() {
     var parts = document.getElementById("modelSelect").value.split(":");
-    if (parts[0] === "pat") resetAngleSlider(document.getElementById("motifStyle").value, faceSize(parts[1]));
+    if (parts[0] === "pat") buildAngleControls(document.getElementById("motifStyle").value, faceSizes(parts[1]));
     draw();
   }
 
@@ -279,7 +308,6 @@
   document.getElementById("radius").addEventListener("change", draw);
   document.getElementById("skip").addEventListener("change", draw);
   document.getElementById("motifStyle").addEventListener("change", drawResettingAngle);
-  document.getElementById("contactAngle").addEventListener("input", draw);
   document.getElementById("patRadius").addEventListener("change", draw);
   document.getElementById("colorByStrip").addEventListener("change", draw);
   document.getElementById("exportBtn").addEventListener("click", exportSVG);

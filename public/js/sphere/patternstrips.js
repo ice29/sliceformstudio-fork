@@ -55,7 +55,8 @@
       var from2 = function (q) { return add(O, add(scale(u, q[0]), scale(v, q[1]))); };
       var poly2D = fv.map(to2);
       var n = fv.length;
-      var angle = (opts.angleDeg != null) ? opts.angleDeg : RO.defaultAngle(style, n);
+      var angle = (opts.angles && opts.angles[n] != null) ? opts.angles[n]
+        : (opts.angleDeg != null ? opts.angleDeg : RO.defaultAngle(style, n));
       var depth = opts.depth || (n > 4 ? 2 : 1);
       var tmpl = RO.templateFor(style, n, angle);
       var d = Math.max(1, Math.min(depth, RO.maxDepth(style, n, angle, tmpl)));

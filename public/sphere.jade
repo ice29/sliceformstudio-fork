@@ -45,11 +45,7 @@
 
   #patPanel(style="margin: 10px 0; display: none")
     p#patStats.text-muted(style="margin-bottom: 10px")
-    .form-inline(style="margin-bottom: 10px")
-      .form-group
-        label(style="margin-right: 8px") Contact angle
-        input#contactAngle(type="range", min="10", max="80", value="36", step="0.5", style="vertical-align: middle; width: 260px")
-        span#contactAngleVal.text-muted(style="margin-left: 8px") 36°
+    #angleControls(style="margin-bottom: 10px")
     .form-inline
       .form-group(style="margin-right: 15px")
         label(style="margin-right: 6px") Motif
